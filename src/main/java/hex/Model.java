@@ -10,7 +10,7 @@ import java.util.Objects;
 
 @Component
 public class Model {
-    private final ArrayList<ArrayList<Byte>> data = new ArrayList<>();
+    private ArrayList<ArrayList<Byte>> data = new ArrayList<>();
 
     private final String filePath;
     @Autowired
@@ -36,6 +36,9 @@ public class Model {
     }
     public ArrayList<ArrayList<Byte>> getData(){
         return data;
+    }
+    public void setData(ArrayList<ArrayList<Byte>> data){
+        this.data = data;
     }
 
     public void updateFile() throws IOException {

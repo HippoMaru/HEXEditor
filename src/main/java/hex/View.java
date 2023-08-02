@@ -32,12 +32,12 @@ public class View {
         }
     }
 
-    public void createTable(ArrayList<ArrayList<Byte>> data){
+    public void updateTable(ArrayList<ArrayList<Byte>> data){
         OptionalInt columnsNumber = data.stream().mapToInt(ArrayList::size).max();
         JTable jTable = new JTable(data.size(), columnsNumber.getAsInt());
         for(int i=0; i<data.size(); i++){
             for(int j=0; j<data.get(i).size(); j++){
-                jTable.setValueAt(data.get(i).get(j), i, j);
+                jTable.setValueAt(String.format("%02X", data.get(i).get(j)), i, j);
             }
         }
         jFrame.add(jTable);
