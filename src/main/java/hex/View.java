@@ -43,4 +43,6 @@ public class View {
         jFrame.add(jTable);
         jFrame.show();
     }
+
+
 }

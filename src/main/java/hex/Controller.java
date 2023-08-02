@@ -27,4 +27,17 @@ public class Controller {
         model.updateFile();
         view.updateTable(data);
     }
+
+    public void deleteOne(int i, int j) throws IOException {
+        updateOne((byte) 0, i, j);
+    }
+    public void deleteMany(int iStart, int jStart, int iEnd, int jEnd) throws IOException {
+        for(int i=iStart; i<=iEnd; i++){
+            for(int j=jStart; j<=jEnd; j++){
+                deleteOne(i, j);
+            }
+        }
+    }
+    public void insertOne(){}
+    public void insertMany(){}
 }
