@@ -14,9 +14,10 @@ public class Controller {
         this.model = model;
         this.view = view;
     }
-
     public void run() throws IOException {
         view.printModel(model.getData());
+        view.createTable(model.getData());
         model.updateFile();
     }
+
 }

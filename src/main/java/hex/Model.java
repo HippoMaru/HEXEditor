@@ -34,7 +34,6 @@ public class Model {
             }
         }
     }
-
     public ArrayList<ArrayList<Byte>> getData(){
         return data;
     }

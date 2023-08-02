@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.OptionalInt;
 
 @Component
 public class View {
@@ -29,5 +30,12 @@ public class View {
             }
             System.out.println();
         }
+    }
+
+    public void createTable(ArrayList<ArrayList<Byte>> data){
+        OptionalInt columnsNumber = data.stream().mapToInt(ArrayList::size).max();
+        JTable jTable = new JTable(data.size(), columnsNumber.getAsInt());
+        jFrame.add(jTable);
+        jFrame.show();
     }
 }
