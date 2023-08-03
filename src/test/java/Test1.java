@@ -6,7 +6,7 @@ import java.io.IOException;
 
 
 public class Test1 {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         ApplicationContext applicationContext =
                 new ClassPathXmlApplicationContext("ApplicationContext.xml");
         Controller controller = applicationContext.getBean("controller", Controller.class);
