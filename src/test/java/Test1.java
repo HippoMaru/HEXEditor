@@ -1,15 +1,15 @@
 import hex.*;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Properties;
 
 
 public class Test1 {
-    public static void main(String[] args) throws IOException, InterruptedException {
-        ApplicationContext applicationContext =
-                new ClassPathXmlApplicationContext("ApplicationContext.xml");
-        Controller controller = applicationContext.getBean("controller", Controller.class);
-        controller.run();
+    public static void main(String[] args) throws IOException {
+        Properties properties = new Properties();
+        properties.load(new FileInputStream("src/main/resources/ApplicationProperties.properties"));
+        HEXEditor hexEditor = new HEXEditor(properties);
+        hexEditor.run();
     }
 }
