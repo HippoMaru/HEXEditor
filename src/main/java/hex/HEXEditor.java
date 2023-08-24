@@ -9,7 +9,9 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -18,7 +20,7 @@ public class HEXEditor {
 
     private final String filePath;
     private final JFrame jFrame;
-    private enum ToolTipMode {SELECT_ONE, SELECT_TWO, SELECT_FOUR;}
+    private enum ToolTipMode {SELECT_ONE, SELECT_TWO, SELECT_FOUR, SELECT_EIGHT;}
     private ToolTipMode curToolTipMode;
     private byte copiedOne;
     private byte[] copiedMany;
@@ -80,42 +82,53 @@ public class HEXEditor {
                 int realColumnIndex = convertColumnIndexToModel(colIndex);
 
                 if (rowIndex < 0) return "00";
+                byte[] bytes;
                 switch (curToolTipMode) {
-
-                    case SELECT_ONE:
-                        if (data.get(rowIndex).size() <= colIndex) tip = "";
+                    case SELECT_ONE -> {
+                        if (data.get(rowIndex).size() <= colIndex) tip = "00";
                         else tip = String.valueOf(data.get(rowIndex).get(realColumnIndex));
-                        break;
-                    case SELECT_TWO:
-                        byte[] bytes = new byte[2];
-                        for(int i=0; i<2; i++){
+                    }
+                    case SELECT_TWO -> {
+                        bytes = new byte[2];
+                        for (int i = 0; i < 2; i++) {
                             if (realColumnIndex + i < data.get(rowIndex).size())
                                 bytes[i] = data.get(rowIndex).get(realColumnIndex + i);
                         }
-                        int val = ((bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF);
-                        tip = String.valueOf(val);
-                        break;
-                    case SELECT_FOUR:
+                        int iVal = ((bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF);
+                        tip = String.valueOf(iVal);
+                    }
+                    case SELECT_FOUR -> {
                         bytes = new byte[4];
-                        for(int i=0; i<4; i++){
+                        for (int i = 0; i < 4; i++) {
                             if (realColumnIndex + i < data.get(rowIndex).size())
                                 bytes[i] = data.get(rowIndex).get(realColumnIndex + i);
                         }
-                        val = ((int) bytes[0] << 24) | (((int) bytes[1] & 0xFF) << 16)
-                                | (((int) bytes[2] & 0xFF) << 8) | ((int) bytes[3] & 0xFF);
-                        tip = String.valueOf(val);
-                        break;
+                        float fVal = ByteBuffer.wrap(bytes).getFloat();
+                        ;
+                        tip = String.valueOf(fVal);
+                    }
+                    case SELECT_EIGHT -> {
+                        bytes = new byte[8];
+                        for (int i = 0; i < 8; i++) {
+                            if (realColumnIndex + i < data.get(rowIndex).size())
+                                bytes[i] = data.get(rowIndex).get(realColumnIndex + i);
+                        }
+                        double dVal = ByteBuffer.wrap(bytes).getDouble();
+                        ;
+                        tip = String.valueOf(dVal);
+                    }
                 }
                 return tip;
             }
         };
         table.setCellSelectionEnabled(true);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
         //popup menu
         JPopupMenu popupMenu = new JPopupMenu();
 
-        JMenuItem deleteOneJMI = new JMenuItem("DeleteOne");
-        deleteOneJMI.addActionListener(new ActionListener() {
+        JMenuItem deleteOneNoShiftJMI = new JMenuItem("DeleteOneNoShift");
+        deleteOneNoShiftJMI.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -129,10 +142,10 @@ public class HEXEditor {
                 }
             }
         });
-        popupMenu.add(deleteOneJMI);
+        popupMenu.add(deleteOneNoShiftJMI);
 
-        JMenuItem deleteManyJMI = new JMenuItem("DeleteMany");
-        deleteManyJMI.addActionListener(new ActionListener() {
+        JMenuItem deleteManyNoShiftJMI = new JMenuItem("DeleteManyNoShift");
+        deleteManyNoShiftJMI.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -154,7 +167,7 @@ public class HEXEditor {
                 }
             }
         });
-        popupMenu.add(deleteManyJMI);
+        popupMenu.add(deleteManyNoShiftJMI);
 
         JMenuItem copyOneJMI = new JMenuItem("CopyOne");
         copyOneJMI.addActionListener(new ActionListener() {
@@ -169,8 +182,34 @@ public class HEXEditor {
         });
         popupMenu.add(copyOneJMI);
 
-        JMenuItem insertOneJMI = new JMenuItem("InsertOne");
-        insertOneJMI.addActionListener(new ActionListener() {
+        JMenuItem copyManyJMI = new JMenuItem("CopyMany");
+        copyManyJMI.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int rowStart = table.getSelectedRow();
+                if (rowStart < 0) return;
+                int rowEnd = table.getSelectionModel().getMaxSelectionIndex();
+                int colStart = table.convertColumnIndexToModel(
+                        table.getSelectedColumn());
+                int colEnd = table.convertColumnIndexToModel(
+                        table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
+                copiedMany = new byte[(rowEnd - rowStart + 1) * (colEnd - colStart + 1)];
+                for (int row=rowStart; row<=rowEnd; row++) {
+                    for (int col=colStart; col<=colEnd; col++) {
+                        try {
+                            copiedMany[(row-rowStart)*(colEnd-colStart + 1) + col-colStart] = data.get(row).get(col);
+                        } catch (Throwable ignored) {
+                        }
+                    }
+                }
+                System.out.println(Arrays.toString(copiedMany));
+            }
+        });
+        popupMenu.add(copyManyJMI);
+
+        JMenuItem insertOneShiftJMI = new JMenuItem("InsertOneShift");
+        insertOneShiftJMI.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -184,15 +223,35 @@ public class HEXEditor {
                 }
             }
         });
-        popupMenu.add(insertOneJMI);
+        popupMenu.add(insertOneShiftJMI);
+
+        JMenuItem insertManyShiftJMI = new JMenuItem("InsertManyShift");
+        insertManyShiftJMI.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = table.getSelectedRow();
+                if (row < 0 || copiedMany.length == 0) return;
+                int col = table.convertColumnIndexToModel(table.getSelectedColumn());
+                for (byte b : copiedMany) {
+                    try {
+                        insertOne(b, row, col++);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            }
+        });
+        popupMenu.add(insertManyShiftJMI);
 
         table.setComponentPopupMenu(popupMenu);
 
         //control
         JPanel control = new JPanel(new FlowLayout());
-        final JCheckBox cb1 = new JCheckBox("ToolTipMode: ONE");
-        final JCheckBox cb2 = new JCheckBox("ToolTipMode: TWO");
-        final JCheckBox cb4 = new JCheckBox("ToolTipMode: FOUR");
+        final JCheckBox cb1 = new JCheckBox("ToolTipMode: BYTE");
+        final JCheckBox cb2 = new JCheckBox("ToolTipMode: INT");
+        final JCheckBox cb4 = new JCheckBox("ToolTipMode: FLOAT");
+        final JCheckBox cb8 = new JCheckBox("ToolTipMode: DOUBLE");
 
         cb1.setSelected(true);
 
@@ -201,6 +260,7 @@ public class HEXEditor {
                 curToolTipMode = ToolTipMode.SELECT_ONE;
                 cb2.setSelected(false);
                 cb4.setSelected(false);
+                cb8.setSelected(false);
             }
         });
 
@@ -209,6 +269,7 @@ public class HEXEditor {
                 curToolTipMode = ToolTipMode.SELECT_TWO;
                 cb1.setSelected(false);
                 cb4.setSelected(false);
+                cb8.setSelected(false);
             }
         });
 
@@ -217,15 +278,26 @@ public class HEXEditor {
                 curToolTipMode = ToolTipMode.SELECT_FOUR;
                 cb1.setSelected(false);
                 cb2.setSelected(false);
+                cb8.setSelected(false);
+            }
+        });
+
+        cb8.addActionListener(e -> {
+            if (cb8.isSelected()) {
+                curToolTipMode = ToolTipMode.SELECT_EIGHT;
+                cb1.setSelected(false);
+                cb2.setSelected(false);
+                cb4.setSelected(false);
             }
         });
 
         control.add(cb1);
         control.add(cb2);
         control.add(cb4);
+        control.add(cb8);
 
         //linking
-        JScrollPane pane = new JScrollPane(table);
+        JScrollPane pane = new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 //        ArrayList<String> rowEnum = new ArrayList<>();
 //        for (int index = 0; index < data.size(); index++) {
 //            rowEnum.add(String.valueOf(index));
@@ -281,8 +353,9 @@ public class HEXEditor {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         File file = new File(Objects.requireNonNull(classloader.getResource(filePath)).getFile());
         try (FileWriter fileWriter = new FileWriter(file);) {
-            for (ArrayList<Byte> byteLine : data)
+            for (ArrayList<Byte> byteLine : data){
                 for (byte b : byteLine) fileWriter.write(b);
+            }
             fileWriter.flush();
         }
     }
@@ -322,15 +395,6 @@ public class HEXEditor {
         data.get(i).add(j, b);
 
     }
-    public void insertMany(byte[] byteArray, int iStart, int jStart, int iEnd, int jEnd) throws IOException {
-        int byteArrayIndex = 0;
-        for (int i = iStart; i <= iEnd; i++) {
-            for (int j = jStart; j <= jEnd; j++) {
-                if (byteArrayIndex == byteArray.length) break;
-                data.get(i).add(j, byteArray[byteArrayIndex]);
-            }
-        }
-    }
 
     public void printDataDEBUG(){
         for(ArrayList<Byte> byteLine : data){
@@ -340,5 +404,4 @@ public class HEXEditor {
             System.out.println();
         }
     }
-
 }
