@@ -297,8 +297,22 @@ public class HEXEditor {
         JTextField searchTF = new JTextField(30);
         JButton searchButton = new JButton("Search");
         searchButton.addActionListener(e -> {
-            String searchInput = searchTF.getText();
-            System.out.println(searchInput);
+            String[] searchInput = searchTF.getText().split(" ");
+            ArrayList<Byte> bytesToSearch = new ArrayList<>();
+            for(String byteAsString : searchInput){
+                try {bytesToSearch.add(Byte.parseByte(byteAsString));}
+                catch (Throwable ignored){return;}
+            }
+            int sublistIndex;
+            for(int i=0; i<data.size(); i++){
+                sublistIndex = Collections.indexOfSubList(data.get(i), bytesToSearch);
+                if (sublistIndex != -1){
+                    table.setRowSelectionInterval(i, i);
+                    table.setColumnSelectionInterval(sublistIndex, sublistIndex+bytesToSearch.size() - 1);
+                    table.scrollRectToVisible(table.getCellRect(i, sublistIndex, true));
+                    break;
+                }
+            }
         });
 
         //linking GUI elements
@@ -409,3 +423,15 @@ public class HEXEditor {
         }
     }
 }
+
+//покажи мне ещё раз
+//что же там произошло
+//и откуда ты такой искалеченный
+//столько лет уже прошло
+//память собрана в петлю
+//детство долбится сквозь щели скворечника
+//что запрятано в углу? что скребет изнутри шкаф?
+//тенью манит, когда ты в одиночестве
+//покажи мне ещё раз
+//что же там произошло
+//и откуда ты такой искалеченный
