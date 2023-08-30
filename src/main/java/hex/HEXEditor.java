@@ -1,5 +1,5 @@
 package hex;
-
+//СЕГОДНЯ ДЕЛАЕМ СЁРЧБАР
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -10,10 +10,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
 
 
 public class HEXEditor {
@@ -296,20 +293,26 @@ public class HEXEditor {
         control.add(cb4);
         control.add(cb8);
 
-        //linking
+        //search panel
+        JTextField searchTF = new JTextField(30);
+        JButton searchButton = new JButton("Search");
+        searchButton.addActionListener(e -> {
+            String searchInput = searchTF.getText();
+            System.out.println(searchInput);
+        });
+
+        //linking GUI elements
         JScrollPane pane = new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-//        ArrayList<String> rowEnum = new ArrayList<>();
-//        for (int index = 0; index < data.size(); index++) {
-//            rowEnum.add(String.valueOf(index));
-//        }
-//        JList<String> list = new JList<String>(rowEnum.toArray(new String[0]));
-//        pane.setRowHeaderView(list);
+        JPanel searchPanel = new JPanel();
+        searchPanel.add(searchTF, BorderLayout.EAST);
+        searchPanel.add(searchButton, BorderLayout.WEST);
+        jFrame.add(searchPanel, BorderLayout.NORTH);
         jFrame.add(pane, BorderLayout.CENTER);
         jFrame.add(control, BorderLayout.SOUTH);
         jFrame.pack();
     }
 
-    class CustomTableModel extends AbstractTableModel {
+    static class CustomTableModel extends AbstractTableModel {
 
         private final ArrayList<ArrayList<Byte>> data;
 
@@ -318,7 +321,8 @@ public class HEXEditor {
         }
 
         public int getColumnCount() {
-            return data.stream().mapToInt(ArrayList::size).max().getAsInt();
+            OptionalInt result = data.stream().mapToInt(ArrayList::size).max();
+            return result.isPresent() ? result.getAsInt() : 0;
         }
 
         public int getRowCount() {
@@ -335,7 +339,7 @@ public class HEXEditor {
         }
 
         public boolean isCellEditable(int row, int col)
-        { return true; }
+        { return col != 0; }
         public void setValueAt(Object value, int row, int col) {
             while (data.get(row).size() <= col){
                 data.get(row).add((byte) 0);
@@ -360,14 +364,14 @@ public class HEXEditor {
         }
     }
 
-    public void updateOne(Byte b, int row, int col) throws IOException {
+    public void updateOne(Byte b, int row, int col) {
         while (data.get(row).size() <= col){
             data.get(row).add((byte) 0);
         }
         data.get(row).set(col, b);
     }
 
-    public void updateMany(byte[] byteArray, int iStart, int jStart, int iEnd, int jEnd) throws IOException {
+    public void updateMany(byte[] byteArray, int iStart, int jStart, int iEnd, int jEnd) {
         int byteArrayIndex = 0;
         for(int i=iStart;i<=iEnd; i++){
             if(i >= data.size()) break;
@@ -381,7 +385,7 @@ public class HEXEditor {
     public void deleteOne(int i, int j) throws IOException {
         updateOne((byte) 0, i, j);
     }
-    public void deleteMany(int iStart, int jStart, int iEnd, int jEnd) throws IOException {
+    public void deleteMany(int iStart, int jStart, int iEnd, int jEnd) {
         byte [] byteArray = new byte[(iEnd - iStart + 1) * (jEnd - jStart + 1)];
         updateMany(byteArray, iStart, jStart, iEnd, jEnd);
     }
