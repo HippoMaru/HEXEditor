@@ -17,15 +17,16 @@ public class HEXEditor {
 
     private final String filePath;
     private final JFrame jFrame;
-    private enum ToolTipMode {SELECT_ONE, SELECT_TWO, SELECT_FOUR, SELECT_EIGHT;}
+    private enum ToolTipMode {SELECT_ONE, SELECT_TWO, SELECT_FOUR, SELECT_EIGHT}
+    private enum ShiftMode {SHIFT, NO_SHIFT}
     private ToolTipMode curToolTipMode;
-    private byte copiedOne;
-    private byte[] copiedMany;
+    private ShiftMode curShiftMode;
+    private byte[] copyBuffer;
     private final ArrayList<ArrayList<Byte>> data;
     public HEXEditor(Properties properties) throws IOException {
-        copiedOne = -1;
-        copiedMany = new byte[]{};
+        copyBuffer = new byte[]{};
         curToolTipMode = ToolTipMode.SELECT_ONE;
+        curShiftMode = ShiftMode.SHIFT;
         //data loading
         this.filePath = properties.getProperty("data.filepath");
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
@@ -101,7 +102,6 @@ public class HEXEditor {
                                 bytes[i] = data.get(rowIndex).get(realColumnIndex + i);
                         }
                         float fVal = ByteBuffer.wrap(bytes).getFloat();
-                        ;
                         tip = String.valueOf(fVal);
                     }
                     case SELECT_EIGHT -> {
@@ -111,7 +111,6 @@ public class HEXEditor {
                                 bytes[i] = data.get(rowIndex).get(realColumnIndex + i);
                         }
                         double dVal = ByteBuffer.wrap(bytes).getDouble();
-                        ;
                         tip = String.valueOf(dVal);
                     }
                 }
@@ -124,26 +123,8 @@ public class HEXEditor {
         //popup menu
         JPopupMenu popupMenu = new JPopupMenu();
 
-        JMenuItem deleteOneNoShiftJMI = new JMenuItem("DeleteOneNoShift");
-        deleteOneNoShiftJMI.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int row = table.getSelectedRow();
-                if (row < 0) return;
-                int col = table.convertColumnIndexToModel(table.getSelectedColumn());
-                try {
-                    deleteOne(row, col);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-        popupMenu.add(deleteOneNoShiftJMI);
-
-        JMenuItem deleteManyNoShiftJMI = new JMenuItem("DeleteManyNoShift");
-        deleteManyNoShiftJMI.addActionListener(new ActionListener() {
-
+        JMenuItem deleteJMI = new JMenuItem("Delete");
+        deleteJMI.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int rowStart = table.getSelectedRow();
@@ -153,35 +134,28 @@ public class HEXEditor {
                         table.getSelectedColumn());
                 int colEnd = table.convertColumnIndexToModel(
                         table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
-                for (int row=rowStart; row<=rowEnd; row++) {
-                    for (int col=colStart; col<=colEnd; col++) {
-                        try {
-                            deleteOne(row, col);
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex);
+                switch (curShiftMode){
+                    case NO_SHIFT -> {
+                        for (int row=rowStart; row<=rowEnd; row++) {
+                            for (int col=colStart; col<=colEnd; col++) {
+                                try {
+                                    deleteOne(row, col);
+                                } catch (IOException ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                            }
                         }
+                    }
+                    case SHIFT -> {
+                        System.out.println("Shift functionality not added");
                     }
                 }
             }
         });
-        popupMenu.add(deleteManyNoShiftJMI);
+        popupMenu.add(deleteJMI);
 
-        JMenuItem copyOneJMI = new JMenuItem("CopyOne");
-        copyOneJMI.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int row = table.getSelectedRow();
-                if (row < 0) return;
-                int col = table.convertColumnIndexToModel(table.getSelectedColumn());
-                copyOne(row, col);
-            }
-        });
-        popupMenu.add(copyOneJMI);
-
-        JMenuItem copyManyJMI = new JMenuItem("CopyMany");
-        copyManyJMI.addActionListener(new ActionListener() {
-
+        JMenuItem copyJMI = new JMenuItem("Copy");
+        copyJMI.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int rowStart = table.getSelectedRow();
@@ -191,107 +165,119 @@ public class HEXEditor {
                         table.getSelectedColumn());
                 int colEnd = table.convertColumnIndexToModel(
                         table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
-                copiedMany = new byte[(rowEnd - rowStart + 1) * (colEnd - colStart + 1)];
+                copyBuffer = new byte[(rowEnd - rowStart + 1) * (colEnd - colStart + 1)];
                 for (int row=rowStart; row<=rowEnd; row++) {
                     for (int col=colStart; col<=colEnd; col++) {
                         try {
-                            copiedMany[(row-rowStart)*(colEnd-colStart + 1) + col-colStart] = data.get(row).get(col);
+                            copyBuffer[(row-rowStart)*(colEnd-colStart + 1) + col-colStart] = data.get(row).get(col);
                         } catch (Throwable ignored) {
                         }
                     }
                 }
-                System.out.println(Arrays.toString(copiedMany));
+                System.out.println(Arrays.toString(copyBuffer));
             }
         });
-        popupMenu.add(copyManyJMI);
+        popupMenu.add(copyJMI);
 
-        JMenuItem insertOneShiftJMI = new JMenuItem("InsertOneShift");
-        insertOneShiftJMI.addActionListener(new ActionListener() {
-
+        JMenuItem pasteJMI = new JMenuItem("Paste");
+        pasteJMI.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int row = table.getSelectedRow();
-                if (row < 0 || copiedOne == -1) return;
+                if (row < 0 || copyBuffer.length == 0) return;
                 int col = table.convertColumnIndexToModel(table.getSelectedColumn());
-                try {
-                    insertOne(copiedOne, row, col);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-        popupMenu.add(insertOneShiftJMI);
-
-        JMenuItem insertManyShiftJMI = new JMenuItem("InsertManyShift");
-        insertManyShiftJMI.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int row = table.getSelectedRow();
-                if (row < 0 || copiedMany.length == 0) return;
-                int col = table.convertColumnIndexToModel(table.getSelectedColumn());
-                for (byte b : copiedMany) {
-                    try {
-                        insertOne(b, row, col++);
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
+                switch (curShiftMode){
+                    case NO_SHIFT -> {
+                        System.out.println("No Shift functionality not added");
+                    }
+                    case SHIFT -> {
+                        for (byte b : copyBuffer) {
+                            try {
+                                insertOne(b, row, col++);
+                            } catch (IOException ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        }
                     }
                 }
             }
         });
-        popupMenu.add(insertManyShiftJMI);
+        popupMenu.add(pasteJMI);
 
         table.setComponentPopupMenu(popupMenu);
 
-        //control
-        JPanel control = new JPanel(new FlowLayout());
-        final JCheckBox cb1 = new JCheckBox("ToolTipMode: BYTE");
-        final JCheckBox cb2 = new JCheckBox("ToolTipMode: INT");
-        final JCheckBox cb4 = new JCheckBox("ToolTipMode: FLOAT");
-        final JCheckBox cb8 = new JCheckBox("ToolTipMode: DOUBLE");
+        //control panels
+        JPanel toolTipModePanel = new JPanel(new FlowLayout());
+        final JCheckBox toolTipCB1 = new JCheckBox("ToolTipMode: BYTE");
+        final JCheckBox toolTipCB2 = new JCheckBox("ToolTipMode: INT");
+        final JCheckBox toolTipCB4 = new JCheckBox("ToolTipMode: FLOAT");
+        final JCheckBox toolTipCB8 = new JCheckBox("ToolTipMode: DOUBLE");
 
-        cb1.setSelected(true);
+        toolTipCB1.setSelected(true);
 
-        cb1.addActionListener(e -> {
-            if (cb1.isSelected()) {
+        toolTipCB1.addActionListener(e -> {
+            if (toolTipCB1.isSelected()) {
                 curToolTipMode = ToolTipMode.SELECT_ONE;
-                cb2.setSelected(false);
-                cb4.setSelected(false);
-                cb8.setSelected(false);
+                toolTipCB2.setSelected(false);
+                toolTipCB4.setSelected(false);
+                toolTipCB8.setSelected(false);
             }
         });
 
-        cb2.addActionListener(e -> {
-            if (cb2.isSelected()) {
+        toolTipCB2.addActionListener(e -> {
+            if (toolTipCB2.isSelected()) {
                 curToolTipMode = ToolTipMode.SELECT_TWO;
-                cb1.setSelected(false);
-                cb4.setSelected(false);
-                cb8.setSelected(false);
+                toolTipCB1.setSelected(false);
+                toolTipCB4.setSelected(false);
+                toolTipCB8.setSelected(false);
             }
         });
 
-        cb4.addActionListener(e -> {
-            if (cb4.isSelected()) {
+        toolTipCB4.addActionListener(e -> {
+            if (toolTipCB4.isSelected()) {
                 curToolTipMode = ToolTipMode.SELECT_FOUR;
-                cb1.setSelected(false);
-                cb2.setSelected(false);
-                cb8.setSelected(false);
+                toolTipCB1.setSelected(false);
+                toolTipCB2.setSelected(false);
+                toolTipCB8.setSelected(false);
             }
         });
 
-        cb8.addActionListener(e -> {
-            if (cb8.isSelected()) {
+        toolTipCB8.addActionListener(e -> {
+            if (toolTipCB8.isSelected()) {
                 curToolTipMode = ToolTipMode.SELECT_EIGHT;
-                cb1.setSelected(false);
-                cb2.setSelected(false);
-                cb4.setSelected(false);
+                toolTipCB1.setSelected(false);
+                toolTipCB2.setSelected(false);
+                toolTipCB4.setSelected(false);
             }
         });
 
-        control.add(cb1);
-        control.add(cb2);
-        control.add(cb4);
-        control.add(cb8);
+        toolTipModePanel.add(toolTipCB1);
+        toolTipModePanel.add(toolTipCB2);
+        toolTipModePanel.add(toolTipCB4);
+        toolTipModePanel.add(toolTipCB8);
+
+        JPanel shiftModePanel = new JPanel(new FlowLayout());
+        final JCheckBox shiftCBShift = new JCheckBox("ShiftMode: SHIFT");
+        final JCheckBox shiftCBNoShift = new JCheckBox("ShiftMode: NO SHIFT");
+
+        shiftCBShift.setSelected(true);
+
+        shiftCBShift.addActionListener(e -> {
+            if (shiftCBShift.isSelected()) {
+                curShiftMode = ShiftMode.SHIFT;
+                shiftCBNoShift.setSelected(false);
+            }
+        });
+
+        shiftCBNoShift.addActionListener(e -> {
+            if (shiftCBNoShift.isSelected()) {
+                curShiftMode = ShiftMode.NO_SHIFT;
+                shiftCBShift.setSelected(false);
+            }
+        });
+
+        shiftModePanel.add(shiftCBShift);
+        shiftModePanel.add(shiftCBNoShift);
 
         //search panel
         JTextField searchTF = new JTextField(30);
@@ -322,7 +308,10 @@ public class HEXEditor {
         searchPanel.add(searchButton, BorderLayout.WEST);
         jFrame.add(searchPanel, BorderLayout.NORTH);
         jFrame.add(pane, BorderLayout.CENTER);
-        jFrame.add(control, BorderLayout.SOUTH);
+        JPanel controlPanel = new JPanel();
+        controlPanel.add(shiftModePanel, BorderLayout.NORTH);
+        controlPanel.add(toolTipModePanel, BorderLayout.SOUTH);
+        jFrame.add(controlPanel, BorderLayout.SOUTH);
         jFrame.pack();
     }
 
@@ -395,7 +384,6 @@ public class HEXEditor {
             }
         }
     }
-
     public void deleteOne(int i, int j) throws IOException {
         updateOne((byte) 0, i, j);
     }
@@ -404,10 +392,6 @@ public class HEXEditor {
         updateMany(byteArray, iStart, jStart, iEnd, jEnd);
     }
 
-    public void copyOne(int i, int j){
-        if (data.get(i).size() <= j) copiedOne = 0;
-        else copiedOne = data.get(i).get(j);
-    }
     public void insertOne(Byte b, int i, int j) throws IOException {
         if (data.get(i).size() <= j) deleteMany(data.get(i).size(), j, i, j);
         data.get(i).add(j, b);
