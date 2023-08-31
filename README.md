@@ -1,10 +1,10 @@
 # HEXEditor - test task for my job
 
-how to configure:
+## how to configure:
 
 application can be simply configured by changing src/main/resources/ApplicationProperties.properties file content
 
-how to use:
+## how to use:
 
 left click provides you with popup menu consisting of delete/copy/paste buttons. delete and paste buttons functionality can be configured - read below
 
