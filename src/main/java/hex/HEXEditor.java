@@ -1,14 +1,12 @@
 package hex;
-//СЕГОДНЯ ДЕЛАЕМ СЁРЧБАР
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -56,7 +54,7 @@ public class HEXEditor {
         Toolkit toolkit = Toolkit.getDefaultToolkit();
         Dimension dimension = toolkit.getScreenSize();
         jFrame.setBounds((dimension.width - width)/2, (dimension.height - height)/2, width, height); //mid loc
-        jFrame.setTitle("I'm SO tired");
+        jFrame.setTitle("HEX Editor 1.0 by HippoMaru");
         jFrame.addWindowListener(new WindowAdapter(){
 
             public void windowClosing(WindowEvent e){
@@ -124,36 +122,33 @@ public class HEXEditor {
         JPopupMenu popupMenu = new JPopupMenu();
 
         JMenuItem deleteJMI = new JMenuItem("Delete");
-        deleteJMI.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int rowStart = table.getSelectedRow();
-                if (rowStart < 0) return;
-                int rowEnd = table.getSelectionModel().getMaxSelectionIndex();
-                int colStart = table.convertColumnIndexToModel(
-                        table.getSelectedColumn());
-                int colEnd = table.convertColumnIndexToModel(
-                        table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
-                switch (curShiftMode){
-                    case NO_SHIFT -> {
-                        for (int row=rowStart; row<=rowEnd; row++) {
-                            for (int col=colStart; col<=colEnd; col++) {
-                                try {
-                                    deleteOne(row, col);
-                                } catch (IOException ex) {
-                                    throw new RuntimeException(ex);
-                                }
+        deleteJMI.addActionListener(e -> {
+            int rowStart = table.getSelectedRow();
+            if (rowStart < 0) return;
+            int rowEnd = table.getSelectionModel().getMaxSelectionIndex();
+            int colStart = table.convertColumnIndexToModel(
+                    table.getSelectedColumn());
+            int colEnd = table.convertColumnIndexToModel(
+                    table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
+            switch (curShiftMode){
+                case NO_SHIFT -> {
+                    for (int row=rowStart; row<=rowEnd; row++) {
+                        for (int col=colStart; col<=colEnd; col++) {
+                            try {
+                                deleteOne(row, col);
+                            } catch (IOException ex) {
+                                throw new RuntimeException(ex);
                             }
                         }
                     }
-                    case SHIFT -> {
-                        for (int row=rowStart; row<=rowEnd; row++) {
-                            for (int col=colStart; col<=colEnd; col++) {
-                                try {
-                                    data.get(row).remove(colStart);
-                                }
-                                catch (Throwable ignored){}
+                }
+                case SHIFT -> {
+                    for (int row=rowStart; row<=rowEnd; row++) {
+                        for (int col=colStart; col<=colEnd; col++) {
+                            try {
+                                data.get(row).remove(colStart);
                             }
+                            catch (Throwable ignored){}
                         }
                     }
                 }
@@ -162,23 +157,20 @@ public class HEXEditor {
         popupMenu.add(deleteJMI);
 
         JMenuItem copyJMI = new JMenuItem("Copy");
-        copyJMI.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int rowStart = table.getSelectedRow();
-                if (rowStart < 0) return;
-                int rowEnd = table.getSelectionModel().getMaxSelectionIndex();
-                int colStart = table.convertColumnIndexToModel(
-                        table.getSelectedColumn());
-                int colEnd = table.convertColumnIndexToModel(
-                        table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
-                copyBuffer = new byte[(rowEnd - rowStart + 1) * (colEnd - colStart + 1)];
-                for (int row=rowStart; row<=rowEnd; row++) {
-                    for (int col=colStart; col<=colEnd; col++) {
-                        try {
-                            copyBuffer[(row-rowStart)*(colEnd-colStart + 1) + col-colStart] = data.get(row).get(col);
-                        } catch (Throwable ignored) {
-                        }
+        copyJMI.addActionListener(e -> {
+            int rowStart = table.getSelectedRow();
+            if (rowStart < 0) return;
+            int rowEnd = table.getSelectionModel().getMaxSelectionIndex();
+            int colStart = table.convertColumnIndexToModel(
+                    table.getSelectedColumn());
+            int colEnd = table.convertColumnIndexToModel(
+                    table.getColumnModel().getSelectionModel().getMaxSelectionIndex());
+            copyBuffer = new byte[(rowEnd - rowStart + 1) * (colEnd - colStart + 1)];
+            for (int row=rowStart; row<=rowEnd; row++) {
+                for (int col=colStart; col<=colEnd; col++) {
+                    try {
+                        copyBuffer[(row-rowStart)*(colEnd-colStart + 1) + col-colStart] = data.get(row).get(col);
+                    } catch (Throwable ignored) {
                     }
                 }
             }
@@ -186,27 +178,24 @@ public class HEXEditor {
         popupMenu.add(copyJMI);
 
         JMenuItem pasteJMI = new JMenuItem("Paste");
-        pasteJMI.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int row = table.getSelectedRow();
-                if (row < 0 || copyBuffer.length == 0) return;
-                int col = table.convertColumnIndexToModel(table.getSelectedColumn());
-                switch (curShiftMode){
-                    case NO_SHIFT -> {
-                        for (byte b : copyBuffer) {
-                            if(data.get(row).size() <= col){data.get(row).add(b);}
-                            else{data.get(row).set(col, b);}
-                            col++;
-                        }
+        pasteJMI.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0 || copyBuffer.length == 0) return;
+            int col = table.convertColumnIndexToModel(table.getSelectedColumn());
+            switch (curShiftMode){
+                case NO_SHIFT -> {
+                    for (byte b : copyBuffer) {
+                        if(data.get(row).size() <= col){data.get(row).add(b);}
+                        else{data.get(row).set(col, b);}
+                        col++;
                     }
-                    case SHIFT -> {
-                        for (byte b : copyBuffer) {
-                            try {
-                                insertOne(b, row, col++);
-                            } catch (IOException ex) {
-                                throw new RuntimeException(ex);
-                            }
+                }
+                case SHIFT -> {
+                    for (byte b : copyBuffer) {
+                        try {
+                            insertOne(b, row, col++);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
                         }
                     }
                 }
@@ -311,8 +300,52 @@ public class HEXEditor {
             }
         });
 
+        //row handling
+        final AbstractTableModel model = new AbstractTableModel() {
+
+            @Serial
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public int getColumnCount() {
+                return 1;
+            }
+
+            @Override
+            public Object getValueAt(int row, int column) {
+                return table.convertRowIndexToModel(row);
+            }
+
+            @Override
+            public int getRowCount() {
+                return table.getRowCount();
+            }
+        };
+        JTable headerTable = new JTable(model);
+        headerTable.setShowGrid(false);
+        headerTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        headerTable.setPreferredScrollableViewportSize(new Dimension(80, 0));
+        headerTable.getColumnModel().getColumn(0).setPreferredWidth(80);
+        headerTable.getColumnModel().getColumn(0).setCellRenderer((x, value, isSelected, hasFocus, row, column) -> {
+
+            boolean selected = table.getSelectionModel().isSelectedIndex(row);
+            Component component = table.getTableHeader().getDefaultRenderer().getTableCellRendererComponent(table, value, false, false, -1, -2);
+            ((JLabel) component).setHorizontalAlignment(JLabel.CENTER);
+            if (selected) {
+                component.setFont(component.getFont().deriveFont(Font.BOLD));
+            } else {
+                component.setFont(component.getFont().deriveFont(Font.PLAIN));
+            }
+            return component;
+        });
+        final RowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
+        table.setRowSorter(sorter);
+        table.getRowSorter().addRowSorterListener(e -> model.fireTableDataChanged());
+        table.getSelectionModel().addListSelectionListener(e -> model.fireTableRowsUpdated(0, model.getRowCount() - 1));
+
         //linking GUI elements
         JScrollPane pane = new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        pane.setRowHeaderView(headerTable);
         JPanel searchPanel = new JPanel();
         searchPanel.add(searchTF, BorderLayout.EAST);
         searchPanel.add(searchButton, BorderLayout.WEST);
@@ -358,7 +391,7 @@ public class HEXEditor {
                 data.get(row).add((byte) 0);
             }
             try {data.get(row).set(col, Byte.valueOf((String) value));}
-            catch (Throwable ignored){};
+            catch (Throwable ignored){}
             fireTableCellUpdated(row, col);
         }
     }
@@ -369,7 +402,7 @@ public class HEXEditor {
     public void updateFile() throws IOException {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         File file = new File(Objects.requireNonNull(classloader.getResource(filePath)).getFile());
-        try (FileWriter fileWriter = new FileWriter(file);) {
+        try (FileWriter fileWriter = new FileWriter(file)) {
             for (ArrayList<Byte> byteLine : data){
                 for (byte b : byteLine) fileWriter.write(b);
             }
@@ -405,27 +438,5 @@ public class HEXEditor {
     public void insertOne(Byte b, int i, int j) throws IOException {
         if (data.get(i).size() <= j) deleteMany(data.get(i).size(), j, i, j);
         data.get(i).add(j, b);
-
-    }
-
-    public void printDataDEBUG(){
-        for(ArrayList<Byte> byteLine : data){
-            for(Byte b : byteLine){
-                System.out.printf("%02X ", b);
-            }
-            System.out.println();
-        }
     }
 }
-
-//покажи мне ещё раз
-//что же там произошло
-//и откуда ты такой искалеченный
-//столько лет уже прошло
-//память собрана в петлю
-//детство долбится сквозь щели скворечника
-//что запрятано в углу? что скребет изнутри шкаф?
-//тенью манит, когда ты в одиночестве
-//покажи мне ещё раз
-//что же там произошло
-//и откуда ты такой искалеченный
