@@ -147,7 +147,14 @@ public class HEXEditor {
                         }
                     }
                     case SHIFT -> {
-                        System.out.println("Shift functionality not added");
+                        for (int row=rowStart; row<=rowEnd; row++) {
+                            for (int col=colStart; col<=colEnd; col++) {
+                                try {
+                                    data.get(row).remove(colStart);
+                                }
+                                catch (Throwable ignored){}
+                            }
+                        }
                     }
                 }
             }
@@ -174,7 +181,6 @@ public class HEXEditor {
                         }
                     }
                 }
-                System.out.println(Arrays.toString(copyBuffer));
             }
         });
         popupMenu.add(copyJMI);
@@ -188,7 +194,11 @@ public class HEXEditor {
                 int col = table.convertColumnIndexToModel(table.getSelectedColumn());
                 switch (curShiftMode){
                     case NO_SHIFT -> {
-                        System.out.println("No Shift functionality not added");
+                        for (byte b : copyBuffer) {
+                            if(data.get(row).size() <= col){data.get(row).add(b);}
+                            else{data.get(row).set(col, b);}
+                            col++;
+                        }
                     }
                     case SHIFT -> {
                         for (byte b : copyBuffer) {
