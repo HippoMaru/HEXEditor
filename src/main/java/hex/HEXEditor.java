@@ -9,6 +9,8 @@ import java.awt.event.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class HEXEditor {
@@ -54,7 +56,7 @@ public class HEXEditor {
         Toolkit toolkit = Toolkit.getDefaultToolkit();
         Dimension dimension = toolkit.getScreenSize();
         jFrame.setBounds((dimension.width - width)/2, (dimension.height - height)/2, width, height); //mid loc
-        jFrame.setTitle("HEX Editor 1.0 by HippoMaru");
+        jFrame.setTitle("HEX Editor 1.1 by HippoMaru");
         jFrame.addWindowListener(new WindowAdapter(){
 
             public void windowClosing(WindowEvent e){
@@ -282,19 +284,24 @@ public class HEXEditor {
         JTextField searchTF = new JTextField(30);
         JButton searchButton = new JButton("Search");
         searchButton.addActionListener(e -> {
-            String[] searchInput = searchTF.getText().split(" ");
-            ArrayList<Byte> bytesToSearch = new ArrayList<>();
-            for(String byteAsString : searchInput){
-                try {bytesToSearch.add(Byte.parseByte(byteAsString));}
-                catch (Throwable ignored){return;}
-            }
-            int sublistIndex;
+            String searchInpuit = searchTF.getText();
+            Pattern pattern = Pattern.compile(searchInpuit);
+            Matcher matcher;
+            StringBuilder dataLine;
+            int startIndex;
+            int endIndex;
             for(int i=0; i<data.size(); i++){
-                sublistIndex = Collections.indexOfSubList(data.get(i), bytesToSearch);
-                if (sublistIndex != -1){
+                dataLine = new StringBuilder();
+                for(byte b: data.get(i)){
+                    dataLine.append(String.format("%02X", b));
+                }
+                matcher = pattern.matcher(dataLine);
+                if (matcher.find()){
+                    startIndex = matcher.start();
+                    endIndex = matcher.end();
                     table.setRowSelectionInterval(i, i);
-                    table.setColumnSelectionInterval(sublistIndex, sublistIndex+bytesToSearch.size() - 1);
-                    table.scrollRectToVisible(table.getCellRect(i, sublistIndex, true));
+                    table.setColumnSelectionInterval(startIndex, (startIndex+endIndex-1)/2);
+                    table.scrollRectToVisible(table.getCellRect(i, startIndex, true));
                     break;
                 }
             }
