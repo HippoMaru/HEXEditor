@@ -300,8 +300,8 @@ public class HEXEditor {
                     startIndex = matcher.start();
                     endIndex = matcher.end();
                     table.setRowSelectionInterval(i, i);
-                    table.setColumnSelectionInterval(startIndex, (startIndex+endIndex-1)/2);
-                    table.scrollRectToVisible(table.getCellRect(i, startIndex, true));
+                    table.setColumnSelectionInterval(startIndex/2, (endIndex-1)/2);
+                    table.scrollRectToVisible(table.getCellRect(i, startIndex/2, true));
                     break;
                 }
             }
